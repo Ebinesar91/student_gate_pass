@@ -4,7 +4,8 @@ Django settings for Smart College Permission Management System.
 
 from pathlib import Path
 import os
-import dj_database_url  # 🚨 Added for PostgreSQL deployment
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -57,13 +58,44 @@ TEMPLATES = [
 WSGI_APPLICATION = 'college_permission_system.wsgi.application'
 
 # ── Database Configuration (Vercel / Local) ──
+# Priority: DATABASE_URL -> POSTGRES_URL -> Local SQLite
 DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
 
+# Check if we are in environment like Vercel
+IS_VERCEL = any(k in os.environ for k in ["VERCEL", "VERCEL_URL", "VERCEL_ENV"])
+
 if DATABASE_URL:
-    # Use PostgreSQL if any database URL is found (Cloud / Production)
     DATABASES = {
-        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600, ssl_require=True)
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
+elif IS_VERCEL:
+    # If on Vercel but no URL is found, we try to build it from components if available
+    POSTGRES_USER = os.environ.get('POSTGRES_USER')
+    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
+    POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
+    POSTGRES_DATABASE = os.environ.get('POSTGRES_DATABASE')
+    
+    if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_DATABASE]):
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': POSTGRES_DATABASE,
+                'USER': POSTGRES_USER,
+                'PASSWORD': POSTGRES_PASSWORD,
+                'HOST': POSTGRES_HOST,
+                'PORT': '5432',
+                'OPTIONS': {'sslmode': 'require'},
+            }
+        }
+    else:
+        # Prevent fallback to SQLite on Vercel
+        raise ImproperlyConfigured(
+            "Vercel detected but no database is found. Please link 'Vercel Postgres' Storage to your project."
+        )
 else:
     # Locally use SQLite (Development)
     DATABASES = {
