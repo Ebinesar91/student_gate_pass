@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-cpms-secret')
 
-# 🚨 Troubleshooting: Set DEBUG to True on Vercel temporarily to see the real error
-DEBUG = os.environ.get('DEBUG', 'True') == 'True' or "VERCEL" in os.environ or "VERCEL_URL" in os.environ
+# 🚨 TEMPORARY DEBUG MODE FOR TROUBLESHOOTING
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -28,7 +28,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware', # 🚨 Added for static files on Vercel
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -58,12 +58,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'college_permission_system.wsgi.application'
 
-# ── Database Configuration (Vercel / Local) ──
-# Priority: DATABASE_URL -> POSTGRES_URL -> Local SQLite
+# ── Database Configuration ──
 DATABASE_URL = os.environ.get('DATABASE_URL') or os.environ.get('POSTGRES_URL')
-
-# Check if we are in environment like Vercel
-IS_VERCEL = any(k in os.environ for k in ["VERCEL", "VERCEL_URL", "VERCEL_ENV"])
 
 if DATABASE_URL:
     DATABASES = {
@@ -73,32 +69,7 @@ if DATABASE_URL:
             ssl_require=True
         )
     }
-elif IS_VERCEL:
-    # If on Vercel but no URL is found, we try to build it from components if available
-    POSTGRES_USER = os.environ.get('POSTGRES_USER')
-    POSTGRES_PASSWORD = os.environ.get('POSTGRES_PASSWORD')
-    POSTGRES_HOST = os.environ.get('POSTGRES_HOST')
-    POSTGRES_DATABASE = os.environ.get('POSTGRES_DATABASE')
-    
-    if all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_HOST, POSTGRES_DATABASE]):
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': POSTGRES_DATABASE,
-                'USER': POSTGRES_USER,
-                'PASSWORD': POSTGRES_PASSWORD,
-                'HOST': POSTGRES_HOST,
-                'PORT': '5432',
-                'OPTIONS': {'sslmode': 'require'},
-            }
-        }
-    else:
-        # Prevent fallback to SQLite on Vercel
-        raise ImproperlyConfigured(
-            "Vercel detected but no database is found. Please link 'Vercel Postgres' Storage to your project."
-        )
 else:
-    # Locally use SQLite (Development)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -141,13 +112,12 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-# 🚨 REPLACE THESE WITH YOUR ACTUAL DETAILS:
 EMAIL_HOST_USER = 'pr.anbu969@gmail.com'
 EMAIL_HOST_PASSWORD = 'hfefqqhgkmpvadlv' 
 DEFAULT_FROM_EMAIL = 'Smart CPMS Admin <noreply@smartcpms.edu>'
 
 # ── Session Security ──
-SESSION_COOKIE_AGE = 3600          # 1 hour session timeout
+SESSION_COOKIE_AGE = 3600
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -163,9 +133,7 @@ CACHES = {
     }
 }
 
-# Max failed login attempts before temp lockout
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCKOUT_MINUTES = 15
 
-# ── Password reset token validity ──
-PASSWORD_RESET_TIMEOUT = 3600  # 1 hour in seconds
+PASSWORD_RESET_TIMEOUT = 3600
