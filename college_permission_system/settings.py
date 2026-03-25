@@ -11,7 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-cpms-secret')
 
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# 🚨 Troubleshooting: Set DEBUG to True on Vercel temporarily to see the real error
+DEBUG = os.environ.get('DEBUG', 'True') == 'True' or "VERCEL" in os.environ or "VERCEL_URL" in os.environ
 
 ALLOWED_HOSTS = ['*']
 
